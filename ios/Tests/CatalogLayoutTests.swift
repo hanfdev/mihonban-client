@@ -132,6 +132,31 @@ final class CatalogLayoutTests: XCTestCase {
         XCTAssertEqual(size(heart, width: 100).height, 0, accuracy: 0.5, "no admin control in a listener's layout")
     }
 
+    func testPersonalFavoriteKeepsItsTouchTargetAndHeadingWidthInBothStates() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = PersonalFavoritesStore(root: root)
+        await store.connect(baseURL: try XCTUnwrap(URL(string: "https://personal-layout.invalid")))
+        let track = Track(id: "personal-layout", title: String(repeating: "Long song title ", count: 10),
+                          albumId: "personal-album", artists: [ArtistCredit(name: "Solo")])
+        let heart = PersonalFavoriteButton(track: track, favorites: store)
+        for selected in [false, true] {
+            if selected { await store.toggle(track: track) }
+            XCTAssertEqual(store.contains(.track, id: track.id), selected)
+            let measuredButton = size(heart, width: 100)
+            XCTAssertEqual(measuredButton.width, 44, accuracy: 0.5)
+            XCTAssertEqual(measuredButton.height, 44, accuracy: 0.5)
+            for width in [CGFloat(264), 346, 480] {
+                for textSize in [DynamicTypeSize.large, .accessibility3] {
+                    let heading = NowPlayingHeading(track: track, openAlbum: {}, openArtists: {}, personalFavorite: heart)
+                    let measured = size(heading.environment(\.dynamicTypeSize, textSize), width: width)
+                    XCTAssertLessThanOrEqual(measured.width, width + 0.5)
+                    XCTAssertGreaterThanOrEqual(measured.height, 44)
+                }
+            }
+        }
+    }
+
     func testDescriptorsOnlyUseSpaceWhenExpanded() {
         let words = (1...100).map { "descriptor \($0)" }
         for width in [CGFloat(264), 346, 700] {

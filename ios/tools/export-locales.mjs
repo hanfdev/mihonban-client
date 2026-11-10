@@ -101,6 +101,7 @@ const extra = {
 const { en } = await import('../../cloud/web/src/locales/en.js')
 const { adminEn } = await import('../../cloud/web/src/i18n-admin-en.js')
 const catalogs = {}
+const personal = JSON.parse(fs.readFileSync(path.join(root, 'tools/personal-locales.json'), 'utf8'))
 function flatten(base, translated, prefix = '', result = {}) {
   for (const [name, fallback] of Object.entries(base)) {
     const key = prefix ? `${prefix}.${name}` : name
@@ -121,6 +122,10 @@ for (const [index, language] of languages.entries()) {
   for (const [key, values] of Object.entries(extra)) {
     if (values.length !== languages.length || values.some(value => !value)) throw new Error(`Incomplete translation: ${key}`)
     result['mobile.' + key] = values[index]
+  }
+  for (const [key, values] of Object.entries(personal)) {
+    if (values.length !== languages.length || values.some(value => !value)) throw new Error(`Incomplete personal translation: ${key}`)
+    result['personal.' + key] = values[index]
   }
   // Normalize only the album term in Simplified Chinese, preserving proper names.
   if (language === 'zh-Hans') {

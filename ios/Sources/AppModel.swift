@@ -35,6 +35,7 @@ final class AppModel {
     var cache = CacheSettings()
     let sessionStore: SessionStore
     let favorites: FavoritesStore
+    let personalFavorites: PersonalFavoritesStore
     let catalog: CatalogStore
     let player = PlayerModel()
     // Per-service storage, present only while signed in to a real service.
@@ -50,6 +51,7 @@ final class AppModel {
 
     init(defaults: UserDefaults = .standard, transport: URLSession? = nil,
          artworkStore: ArtworkStore = .shared,
+         personalFavoritesRoot: URL = MediaPaths.supportRoot,
          prepareArtworkDirectory: @escaping @Sendable (URL) async -> Void = { target in
              await Task.detached(priority: .utility) {
                  try? FileManager.default.createDirectory(at: target, withIntermediateDirectories: true,
@@ -57,6 +59,7 @@ final class AppModel {
              }.value
          }) {
         self.defaults = defaults
+        personalFavorites = PersonalFavoritesStore(root: personalFavoritesRoot)
         self.transport = transport
         self.artworkStore = artworkStore
         self.prepareArtworkDirectory = prepareArtworkDirectory
@@ -70,7 +73,9 @@ final class AppModel {
         cache.preloadDidChange = { [weak player = player] in player?.preloadSettingsChanged() }
         catalog.localAlbum = { [weak self] id in self?.downloads?.albums[id] }
         session.authorizationRejected = { [weak self] address in
-            guard let self, RememberedSession.load(self.defaults)?.address == address.absoluteString else { return }
+            guard let self else { return }
+            if self.client?.baseURL == address { self.personalFavorites.reset() }
+            guard RememberedSession.load(self.defaults)?.address == address.absoluteString else { return }
             RememberedSession.save(nil, self.defaults)
         }
     }
@@ -170,6 +175,7 @@ final class AppModel {
                 } : albums.flatMap(\.normalizedTracks)
             catalog.seed(albums: albums, artists: DemoLibrary.artists, tracks: tracks)
             player.connect(api, demoURL: try? DemoLibrary.tone())
+            await personalFavorites.connect(baseURL: api.baseURL)
             return
         }
         #endif
@@ -231,9 +237,12 @@ final class AppModel {
         // Storage setup can suspend, allowing the new shell to appear meanwhile.
         catalog.reset()
         favorites.reset()
+        personalFavorites.reset()
         // Metadata is shown only after authorization, never while signed out.
         sessionStore.connect(api, info: info)
         player.connect(api)
+        await personalFavorites.connect(baseURL: api.baseURL)
+        guard token == generation else { return }
         await attachStorage(api)
         guard token == generation else { return }
         await catalog.connect()
@@ -320,6 +329,7 @@ final class AppModel {
         sessionStore.invalidate()
         catalog.reset()
         favorites.reset()
+        personalFavorites.reset()
         pendingRoute = nil
         password = ""
         error = nil

@@ -1,6 +1,14 @@
-# mihonban / 見本盤
+# Mihonban Client
 
 [English](README.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Français](README.fr.md) · [Español](README.es.md)
+
+Ce dépôt développe un fork indépendant du client iPhone/iPad destiné aux personnes qui écoutent un serveur Mihonban, y compris les auditeurs ordinaires. Il part du Build 95 vérifié du client d’origine et conserve l’historique des sources amont ainsi que la licence AGPL-3.0.
+
+**Mes favoris** sont des signets d’albums et de morceaux enregistrés sur l’appareil, séparément pour chaque serveur. **Sélection des administrateurs** reste la sélection partagée du serveur, gérée par ses administrateurs. Les favoris personnels sont modifiables hors ligne, sans modifier la sélection partagée ni télécharger d’audio. Le serveur identifie actuellement des rôles d’accès plutôt que des comptes individuels : les favoris ne se synchronisent donc pas entre appareils et ne garantissent pas de séparation par compte.
+
+L’application utilise `org.mihonban.client.ios` et le nom affiché **Mihonban Client**, ce qui permet de l’installer à côté de l’application d’origine. Consultez le [périmètre, le stockage et la compilation du client](CLIENT-FORK.fr.md) ainsi que les [artefacts de compilation](https://github.com/hanfdev/mihonban-client/actions/workflows/mobile.yml). Une exécution CI réussie fournit un IPA non signé, à signer avant installation.
+
+La documentation héritée ci-dessous décrit l’ensemble du [projet serveur Mihonban](https://github.com/hanfdev/mihonban). Les sources serveur, web, bureau et Android restent disponibles comme contexte amont ; le développement initial de ce fork concerne le client iOS/iPadOS.
 
 Mihonban est une bibliothèque musicale privée et auto-hébergée dotée d’un lecteur web adaptatif. Elle peut fonctionner localement avec Node et SQLite, utiliser l’émulateur D1 local de Wrangler, ou être déployée telle quelle sur Cloudflare Workers et D1. Les fichiers audio restent dans un stockage que vous contrôlez.
 

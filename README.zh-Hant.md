@@ -1,6 +1,14 @@
-# mihonban / 見本盤
+# Mihonban Client
 
 [English](README.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Français](README.fr.md) · [Español](README.es.md)
+
+本儲存庫開發獨立的 iPhone/iPad 用戶端分支，面向連接 Mihonban 伺服器聽音樂的使用者，也包括一般聽眾。它以原用戶端已驗證的 Build 95 為起點，保留上游原始碼歷史及 AGPL-3.0 授權條款。
+
+**我的收藏**是在裝置本機儲存的專輯與歌曲書籤，依伺服器分別儲存。**管理員精選**仍是由管理員管理的伺服器共享內容。個人收藏可離線修改，不會改變共享精選，也不會下載音訊。目前伺服器只區分存取角色，不提供個人帳戶識別，因此個人收藏不會跨裝置同步，也不承諾依帳戶隔離。
+
+應用程式使用 `org.mihonban.client.ios` 和顯示名稱 **Mihonban Client**，可與原應用程式同時安裝。參閱[用戶端範圍、儲存與建置說明](CLIENT-FORK.zh-Hant.md)及[用戶端建置產物](https://github.com/hanfdev/mihonban-client/actions/workflows/mobile.yml)。成功的 CI 執行會提供未簽署 IPA，安裝前需要簽署。
+
+下方保留的原文件介紹更完整的 [Mihonban 伺服器專案](https://github.com/hanfdev/mihonban)。伺服器、網頁、桌面和 Android 原始碼保留作為上游背景；本分支最初的開發範圍是 iOS/iPadOS 用戶端。
 
 Mihonban 是一套私有、自託管音樂曲庫和響應式網頁播放器。它可以使用 Node + SQLite 在本地執行，也可以使用 Wrangler 本地 D1，或部署到 Cloudflare Workers + D1；音訊始終儲存在你控制的儲存中。
 

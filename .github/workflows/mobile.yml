@@ -1,9 +1,9 @@
-name: iOS preview
+name: Mihonban Client iOS
 
 on:
   workflow_dispatch:
   push:
-    branches: [mobile-dev]
+    branches: [main]
     paths: ["ios/**", ".github/workflows/mobile.yml"]
 
 permissions:
@@ -17,7 +17,7 @@ jobs:
   ios:
     name: Build and test native iOS
     runs-on: macos-26
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode and install build tools
@@ -165,6 +165,11 @@ jobs:
             -derivedDataPath build/Simulator -clonedSourcePackagesDirPath .spm \
             -resultBundlePath build/iPadTests.xcresult \
             -only-testing:MihonbanTests/FavoritesRefreshTests \
+            -only-testing:MihonbanTests/PersonalFavoritesTests \
+            -only-testing:MihonbanTests/PlayerFavoriteTests \
+            -only-testing:MihonbanUITests/MihonbanUITests/testListenerPersonalFavoritesPersistAfterRelaunchWithoutChangingPicks \
+            -only-testing:MihonbanUITests/MihonbanUITests/testAdminPersonalFavoritesAndCuratedPicksRemainIndependent \
+            -only-testing:MihonbanUITests/MihonbanUITests/testAdminPicksThePlayingTrack \
             -only-testing:MihonbanTests/NowPlayingTests \
             -only-testing:MihonbanTests/OfflineLaunchTests \
             -only-testing:MihonbanTests/PlayerTransitionTests \

@@ -162,15 +162,15 @@ struct NowPlayingView: View {
             .accessibilityAddTraits(.isImage).accessibilityIdentifier("player.cover")
     }
 
-    private var favoriteButton: PlayerFavoriteButton? {
-        guard model.sessionStore.isAdmin, let track = player.current else { return nil }
-        return PlayerFavoriteButton(trackID: track.id, favorites: model.favorites, session: model.sessionStore)
+    private var favoriteButton: PersonalFavoriteButton? {
+        guard let track = player.current else { return nil }
+        return PersonalFavoriteButton(track: track, favorites: model.personalFavorites)
     }
 
     private func controls(style: NowPlayingLayout.ControlStyle, width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: style.spacing) {
             NowPlayingHeading(track: player.current, openAlbum: openAlbum,
-               openArtists: openArtists, favorite: favoriteButton,
+               openArtists: openArtists, personalFavorite: favoriteButton,
                titleSize: style.titleSize, artistSize: style.artistSize)
                 .measurePlayerFrame(cover: false, in: Space.surface)
                 .environment(\.marqueeSuspended, transitioning || routePickerPresented || queueVisible || creditsSheet != nil || sharing != nil)

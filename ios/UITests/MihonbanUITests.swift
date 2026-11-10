@@ -174,20 +174,18 @@ final class MihonbanUITests: XCTestCase {
         try await Self.resetFixture()
         addTeardownBlock { try await Self.resetFixture() }
         let app = openAdminPlayer()
-        let heart = app.buttons["player.favorite"]
+        let heart = app.buttons["player.personalFavorite"]
         XCTAssertTrue(heart.waitForExistence(timeout: 10))
-        XCTAssertFalse(heart.isSelected)
-        XCTAssertEqual(heart.label, "Add to picks")
         XCTAssertEqual(heart.frame.width, 44, accuracy: 0.5)
         XCTAssertEqual(heart.frame.height, 44, accuracy: 0.5)
         XCTAssertGreaterThan(heart.frame.minX, app.buttons["player.title"].frame.maxX)
         assertShortTitleCover(app)
-        changePick(app, selected: true)
+        try await changePick(app, selected: true)
         let added = try await Self.fixtureTrackPicks()
-        XCTAssertTrue(added.contains("network-mp3"), "the heart must persist the current track to the service")
+        XCTAssertTrue(added.contains("network-mp3"), "the admin action must persist the current track to the service")
         XCTAssertTrue(added.contains("network-flac"), "another track's pick is unchanged")
         screenshot("27-player-picked")
-        changePick(app, selected: false)
+        try await changePick(app, selected: false)
         let removed = try await Self.fixtureTrackPicks()
         XCTAssertFalse(removed.contains("network-mp3"))
         XCTAssertTrue(removed.contains("network-flac"))
@@ -206,16 +204,17 @@ final class MihonbanUITests: XCTestCase {
         pause.tap()
         app.buttons["player.expand"].tap()
         waitForLabel(app.buttons["player.title"], "Test FLAC")
-        XCTAssertTrue(app.buttons["player.favorite"].isSelected, "the already-picked track has its own state")
+        assertPlayerPickLabel(app, trackID: "network-flac", selected: true)
         app.buttons["player.next"].tap()
         waitForLabel(app.buttons["player.title"], "Test MP3")
         app.buttons["player.toggle"].firstMatch.tap()
-        XCTAssertFalse(app.buttons["player.favorite"].isSelected, "changing tracks cannot carry the old heart state")
+        assertPlayerPickLabel(app, trackID: "network-mp3", selected: false)
     }
 
-    private func openAdminPlayer() -> XCUIApplication {
+    private func openAdminPlayer(appearance: String? = nil) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-AppleLanguages", "(en)"]
+        if let appearance { app.launchArguments += ["-appearance", appearance] }
         app.launch()
         signIn(app, password: "fixture-admin")
         let album = app.buttons["album.network-mp3"]
@@ -235,15 +234,36 @@ final class MihonbanUITests: XCTestCase {
         return app
     }
 
-    private func changePick(_ app: XCUIApplication, selected: Bool) {
-        let heart = app.buttons["player.favorite"]
-        heart.tap()
-        let saved = expectation(for: NSPredicate { _, _ in heart.isSelected == selected && heart.isEnabled },
-                                evaluatedWith: heart)
-        wait(for: [saved], timeout: 15)
+    private func changePick(_ app: XCUIApplication, selected: Bool) async throws {
+        app.buttons["player.more"].tap()
+        let action = app.buttons["curated.track.network-mp3"]
+        XCTAssertTrue(action.waitForExistence(timeout: 10))
+        XCTAssertEqual(action.label, selected ? "Add to admin picks" : "Remove from admin picks")
+        action.tap()
+        let deadline = ContinuousClock.now.advanced(by: .seconds(15))
+        var saved = false
+        while ContinuousClock.now < deadline {
+            if try await Self.fixtureTrackPicks().contains("network-mp3") == selected { saved = true; break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTAssertTrue(saved, "The curated action must finish its server write")
         XCTAssertEqual(app.buttons["player.title"].label, "Test MP3")
         XCTAssertEqual(app.buttons["player.toggle"].firstMatch.label, "Play", "picking must not resume or replace playback")
-        XCTAssertEqual(heart.label, selected ? "Remove from picks" : "Add to picks")
+        assertPlayerPickLabel(app, trackID: "network-mp3", selected: selected)
+    }
+
+    private func assertPlayerPickLabel(_ app: XCUIApplication, trackID: String, selected: Bool) {
+        app.buttons["player.more"].tap()
+        let action = app.buttons["curated.track.\(trackID)"]
+        XCTAssertTrue(action.waitForExistence(timeout: 10))
+        XCTAssertEqual(action.label, selected ? "Remove from admin picks" : "Add to admin picks")
+        dismissPlayerMenu(app)
+    }
+
+    private func dismissPlayerMenu(_ app: XCUIApplication) {
+        // Tap the outside edge, away from both the menu and playback controls.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5)).tap()
+        XCTAssertTrue(app.buttons["player.toggle"].firstMatch.wait(for: \.isHittable, toEqual: true, timeout: 5))
     }
 
     private nonisolated static func fixtureTrackPicks() async throws -> [String] {
@@ -258,6 +278,175 @@ final class MihonbanUITests: XCTestCase {
         struct Item: Decodable { let id: String }
         struct Picks: Decodable { let tracks: [Item] }
         return try JSONDecoder().decode(Picks.self, from: data).tracks.map(\.id)
+    }
+
+    func testListenerPersonalFavoritesPersistAfterRelaunchWithoutChangingPicks() async throws {
+        try await Self.resetFixture()
+        addTeardownBlock { try await Self.resetFixture() }
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-AppleLanguages", "(en)", "-appearance", "light"]
+        app.launch()
+        defer { app.terminate(); XCUIDevice.shared.orientation = .portrait }
+        signIn(app, password: "fixture-password")
+        let baseline = try await Self.fixtureTrackPicks()
+        let album = app.buttons["album.network-mp3"]
+        XCTAssertTrue(album.waitForExistence(timeout: 20))
+        album.tap()
+        let albumHeart = app.buttons["album.personalFavorite"]
+        setPersonalFavorite(albumHeart, selected: false)
+        setPersonalFavorite(albumHeart, selected: true)
+        openPausedAlbumPlayer(app)
+        let heart = app.buttons["player.personalFavorite"]
+        setPersonalFavorite(heart, selected: false)
+        setPersonalFavorite(heart, selected: true)
+        XCTAssertEqual(app.buttons["player.toggle"].firstMatch.label, "Play")
+        XCTAssertEqual(app.buttons["player.title"].label, "Test MP3")
+        app.buttons["player.more"].tap()
+        XCTAssertTrue(app.buttons["personal.track.network-mp3"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.buttons["personal.track.network-mp3"].label, "Remove from my favorites")
+        XCTAssertFalse(app.buttons["curated.track.network-mp3"].exists, "A listener must not receive admin write actions")
+        dismissPlayerMenu(app)
+        screenshot("96-personal-listener-player-light")
+        app.buttons["player.collapse"].tap()
+        openTab(app, "Favorites")
+        let savedAlbum = element(app, "personal.favorite.album.network-mp3")
+        XCTAssertTrue(savedAlbum.waitForExistence(timeout: 10))
+        selectPersonalKind("Songs", in: app)
+        let savedTrack = element(app, "personal.favorite.track.network-mp3")
+        XCTAssertTrue(savedTrack.waitForExistence(timeout: 10))
+        screenshot("96-personal-listener-songs-light")
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            XCUIDevice.shared.orientation = .landscapeLeft
+            let rotated = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                app.frame.width > app.frame.height && savedTrack.isHittable
+            }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [rotated], timeout: 10), .completed)
+            screenshot("96-personal-listener-songs-light-landscape")
+        }
+        let picksAfterSaving = try await Self.fixtureTrackPicks()
+        XCTAssertEqual(picksAfterSaving, baseline)
+
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["settings.open"].firstMatch.waitForExistence(timeout: 20))
+        openTab(app, "Favorites")
+        XCTAssertTrue(savedAlbum.waitForExistence(timeout: 10), "Album favorites survive app termination")
+        selectPersonalKind("Songs", in: app)
+        XCTAssertTrue(savedTrack.waitForExistence(timeout: 10), "Song favorites survive app termination")
+        screenshot("96-personal-listener-restored")
+        savedTrack.tap()
+        pauseAndExpand(app)
+        XCTAssertTrue(heart.waitForExistence(timeout: 10))
+        XCTAssertTrue(heart.isSelected)
+        setPersonalFavorite(heart, selected: false)
+        app.buttons["player.collapse"].tap()
+        let removed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in !savedTrack.exists }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [removed], timeout: 10), .completed)
+
+        // Clean the same device-local entries that were normalized at the start.
+        openTab(app, "Albums")
+        XCTAssertTrue(album.waitForExistence(timeout: 10))
+        album.tap()
+        XCTAssertTrue(albumHeart.waitForExistence(timeout: 10))
+        XCTAssertTrue(albumHeart.isSelected)
+        setPersonalFavorite(albumHeart, selected: false)
+        openTab(app, "Favorites")
+        selectPersonalKind("Albums", in: app)
+        XCTAssertFalse(savedAlbum.exists)
+        let curated = app.buttons["personal.curated.open"]
+        XCTAssertTrue(curated.waitForExistence(timeout: 10))
+        curated.tap()
+        XCTAssertTrue(element(app, "favorite.network-mp3").waitForExistence(timeout: 10),
+                      "Removing a personal favorite must not remove an admin pick")
+        screenshot("96-personal-listener-admin-picks")
+        let picksAfterRemoving = try await Self.fixtureTrackPicks()
+        XCTAssertEqual(picksAfterRemoving, baseline)
+    }
+
+    func testAdminPersonalFavoritesAndCuratedPicksRemainIndependent() async throws {
+        try await Self.resetFixture()
+        addTeardownBlock { try await Self.resetFixture() }
+        XCUIDevice.shared.orientation = .portrait
+        let app = openAdminPlayer(appearance: "dark")
+        defer { app.terminate(); XCUIDevice.shared.orientation = .portrait }
+        let heart = app.buttons["player.personalFavorite"]
+        setPersonalFavorite(heart, selected: false)
+        XCTAssertEqual(heart.frame.width, 44, accuracy: 0.5)
+        XCTAssertEqual(heart.frame.height, 44, accuracy: 0.5)
+        XCTAssertGreaterThan(heart.frame.minX, app.buttons["player.title"].frame.maxX)
+        setPersonalFavorite(heart, selected: true)
+        let initialPicks = try await Self.fixtureTrackPicks()
+        XCTAssertFalse(initialPicks.contains("network-mp3"), "An admin's heart is still a personal action")
+        app.buttons["player.more"].tap()
+        XCTAssertTrue(app.buttons["curated.track.network-mp3"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.buttons["personal.track.network-mp3"].label, "Remove from my favorites")
+        XCTAssertEqual(app.buttons["curated.track.network-mp3"].label, "Add to admin picks")
+        screenshot("96-personal-admin-distinct-actions-dark")
+        dismissPlayerMenu(app)
+        try await changePick(app, selected: true)
+        XCTAssertTrue(heart.isSelected, "Curating does not change the personal selection")
+        setPersonalFavorite(heart, selected: false)
+        let picksAfterPersonalRemoval = try await Self.fixtureTrackPicks()
+        XCTAssertTrue(picksAfterPersonalRemoval.contains("network-mp3"))
+        setPersonalFavorite(heart, selected: true)
+        try await changePick(app, selected: false)
+        XCTAssertTrue(heart.isSelected, "Removing an admin pick must retain the personal favorite")
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            XCUIDevice.shared.orientation = .landscapeLeft
+            let rotated = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                app.frame.width > app.frame.height && heart.isHittable
+            }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [rotated], timeout: 10), .completed)
+        }
+        screenshot("96-personal-admin-player-dark")
+        app.buttons["player.collapse"].tap()
+        openTab(app, "Favorites")
+        selectPersonalKind("Songs", in: app)
+        let savedTrack = element(app, "personal.favorite.track.network-mp3")
+        XCTAssertTrue(savedTrack.waitForExistence(timeout: 10))
+        screenshot("96-personal-admin-songs-dark")
+        savedTrack.tap()
+        pauseAndExpand(app)
+        setPersonalFavorite(heart, selected: false)
+        let finalPicks = try await Self.fixtureTrackPicks()
+        XCTAssertEqual(finalPicks, initialPicks)
+    }
+
+    private func openPausedAlbumPlayer(_ app: XCUIApplication) {
+        XCTAssertTrue(app.buttons["album.play"].waitForExistence(timeout: 10))
+        app.buttons["album.play"].tap()
+        pauseAndExpand(app)
+    }
+
+    private func pauseAndExpand(_ app: XCUIApplication) {
+        let pause = app.buttons["Pause"].firstMatch
+        XCTAssertTrue(pause.waitForExistence(timeout: 10))
+        pause.tap()
+        let expand = app.buttons["player.expand"]
+        XCTAssertTrue(expand.waitForExistence(timeout: 10))
+        expand.tap()
+        waitForLabel(app.buttons["player.toggle"].firstMatch, "Play")
+        XCTAssertTrue(app.buttons["player.personalFavorite"].waitForExistence(timeout: 10))
+    }
+
+    private func setPersonalFavorite(_ button: XCUIElement, selected: Bool) {
+        XCTAssertTrue(button.wait(for: \.isEnabled, toEqual: true, timeout: 15))
+        if button.isSelected != selected { button.tap() }
+        let saved = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            button.isSelected == selected && button.isEnabled
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [saved], timeout: 15), .completed)
+        XCTAssertEqual(button.label, selected ? "Remove from my favorites" : "Add to my favorites")
+        XCTAssertEqual(button.value as? String, selected ? "Saved" : "Not saved")
+    }
+
+    private func selectPersonalKind(_ title: String, in app: XCUIApplication) {
+        let picker = app.segmentedControls["personal.kind"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 10))
+        let segment = picker.buttons[title]
+        XCTAssertTrue(segment.waitForExistence(timeout: 5))
+        if !segment.isSelected { segment.tap() }
     }
 
     func testRealConnectionAndNetworkPlayback() throws {
@@ -285,7 +474,7 @@ final class MihonbanUITests: XCTestCase {
         let elapsed = app.staticTexts.matching(NSPredicate(format: "label MATCHES %@", "0:0[2-9]")).firstMatch
         XCTAssertTrue(elapsed.waitForExistence(timeout: 20))
         XCTAssertEqual(app.state, .runningForeground)
-        XCTAssertFalse(app.buttons["player.favorite"].exists, "listeners cannot change shared picks")
+        XCTAssertTrue(app.buttons["player.personalFavorite"].exists, "listeners can save personal favorites")
         screenshot("06-network-playback")
         // Tapping the track title opens its album, not the adjacent artist picker.
         let titleButton = app.buttons["player.title"]
@@ -328,7 +517,8 @@ final class MihonbanUITests: XCTestCase {
         XCTAssertTrue(element(app, "track.network-ogg").waitForExistence(timeout: 15))
         screenshot("08-tracks")
 
-        openTab(app, "Picks")
+        openTab(app, "Favorites")
+        app.buttons["personal.curated.open"].tap()
         XCTAssertTrue(element(app, "favorite.network-mp3").waitForExistence(timeout: 15))
         screenshot("09-picks")
 

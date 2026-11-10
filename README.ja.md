@@ -1,6 +1,14 @@
-# mihonban / 見本盤
+# Mihonban Client
 
 [English](README.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Français](README.fr.md) · [Español](README.es.md)
+
+このリポジトリでは、一般リスナーを含む Mihonban サーバーの利用者向けに、独立した iPhone/iPad クライアントのフォークを開発しています。元のクライアントで検証済みの Build 95 を出発点とし、上流のソース履歴と AGPL-3.0 ライセンスを継承します。
+
+**自分のお気に入り**は端末内に保存するアルバムと曲のブックマークで、サーバーごとに管理します。**管理者のおすすめ**は引き続き管理者が編集するサーバー共有の選曲です。個人のお気に入りはオフラインでも変更でき、共有の選曲を変更したり音声をダウンロードしたりしません。現在のサーバーは個人アカウントではなくアクセス権限を識別するため、端末間の同期やアカウント単位の分離は提供しません。
+
+アプリの識別子は `org.mihonban.client.ios`、表示名は **Mihonban Client** で、元のアプリと同時にインストールできます。[対象範囲・保存・ビルドの説明](CLIENT-FORK.ja.md)と[クライアントのビルド成果物](https://github.com/hanfdev/mihonban-client/actions/workflows/mobile.yml)を参照してください。成功した CI 実行から未署名 IPA を取得できます。インストール前に署名が必要です。
+
+以下の継承ドキュメントは、より広い [Mihonban サーバープロジェクト](https://github.com/hanfdev/mihonban)を説明しています。サーバー、Web、デスクトップ、Android のソースは上流の背景資料として残します。このフォークの初期開発対象は iOS/iPadOS クライアントです。
 
 Mihonban は、レスポンシブな Web プレーヤーを備えた、個人向けのセルフホスト型音楽ライブラリです。Node と SQLite を使ったローカル実行、Wrangler のローカル D1 エミュレーター、Cloudflare Workers と D1 へのデプロイに対応しています。音声ファイルは、常に自分で管理するストレージに保管されます。
 

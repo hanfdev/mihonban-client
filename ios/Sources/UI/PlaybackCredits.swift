@@ -63,6 +63,7 @@ struct NowPlayingHeading: View {
     let openAlbum: () -> Void
     let openArtists: () -> Void
     var favorite: PlayerFavoriteButton? = nil
+    var personalFavorite: PersonalFavoriteButton? = nil
     var titleSize: CGFloat = 27
     var artistSize: CGFloat = 17
 
@@ -70,7 +71,8 @@ struct NowPlayingHeading: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 12) {
                 PlaybackTitleButton(track: track, openAlbum: openAlbum, fontSize: titleSize)
-                if let favorite { favorite.id(track?.id).fixedSize() }
+                if let personalFavorite { personalFavorite.id(track?.id).fixedSize() }
+                else if let favorite { favorite.id(track?.id).fixedSize() }
             }
             PlaybackCreditsButton(credits: PlaybackCredits(track: track), action: openArtists, fontSize: artistSize)
         }.frame(maxWidth: .infinity, alignment: .leading)

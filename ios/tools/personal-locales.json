@@ -1,0 +1,18 @@
+{
+  "tab": ["Favorites", "お気に入り", "즐겨찾기", "Favoris", "Favoritos", "收藏", "收藏"],
+  "title": ["My favorites", "自分のお気に入り", "내 즐겨찾기", "Mes favoris", "Mis favoritos", "我的收藏", "我的收藏"],
+  "hint": ["Saved on this device, separately for each server. Your favorites do not change admin picks or download audio.", "この端末にサーバーごとに保存します。管理者のおすすめは変更せず、音声もダウンロードしません。", "서버별로 이 기기에 저장됩니다. 관리자 추천을 변경하거나 오디오를 다운로드하지 않습니다.", "Enregistrés sur cet appareil, par serveur. Vos favoris ne changent pas la sélection admin et ne téléchargent pas l’audio.", "Guardados en este dispositivo, por servidor. No cambian la selección del administrador ni descargan audio.", "仅保存在此设备，按服务器分别保存。个人收藏不会修改管理员精选，也不会自动下载音频。", "僅儲存在此裝置，按伺服器分別儲存。個人收藏不會修改管理員精選，也不會自動下載音訊。"],
+  "add": ["Add to my favorites", "自分のお気に入りに追加", "내 즐겨찾기에 추가", "Ajouter à mes favoris", "Añadir a mis favoritos", "加入我的收藏", "加入我的收藏"],
+  "remove": ["Remove from my favorites", "自分のお気に入りから削除", "내 즐겨찾기에서 제거", "Retirer de mes favoris", "Quitar de mis favoritos", "移出我的收藏", "移出我的收藏"],
+  "saved": ["Saved", "保存済み", "저장됨", "Enregistré", "Guardado", "已收藏", "已收藏"],
+  "notSaved": ["Not saved", "未保存", "저장 안 됨", "Non enregistré", "Sin guardar", "未收藏", "未收藏"],
+  "curatedTitle": ["Admin picks", "管理者のおすすめ", "관리자 추천", "Sélection admin", "Selección del administrador", "管理员精选", "管理員精選"],
+  "curatedAdd": ["Add to admin picks", "管理者のおすすめに追加", "관리자 추천에 추가", "Ajouter à la sélection admin", "Añadir a la selección del administrador", "加入管理员精选", "加入管理員精選"],
+  "curatedRemove": ["Remove from admin picks", "管理者のおすすめから削除", "관리자 추천에서 제거", "Retirer de la sélection admin", "Quitar de la selección del administrador", "移出管理员精选", "移出管理員精選"],
+  "empty": ["No favorites here yet", "お気に入りはまだありません", "아직 즐겨찾기가 없습니다", "Aucun favori pour le moment", "Aún no hay favoritos", "这里还没有收藏", "這裡還沒有收藏"],
+  "emptyHint": ["Tap the heart on an album or song to keep it here.", "アルバムや曲のハートをタップして追加します。", "앨범이나 곡의 하트를 눌러 추가하세요.", "Touchez le cœur d’un album ou d’un morceau pour l’ajouter ici.", "Toca el corazón de un álbum o canción para guardarlo aquí.", "点按音盘或歌曲的爱心，即可加入我的收藏。", "點按音盤或歌曲的愛心，即可加入我的收藏。"],
+  "unavailable": ["Your saved items are not available in the current library. They remain saved on this device.", "保存した項目は現在のライブラリにありません。この端末の保存内容は保持されます。", "저장한 항목을 현재 라이브러리에서 사용할 수 없습니다. 이 기기에는 계속 저장됩니다.", "Ces favoris ne sont pas disponibles dans la bibliothèque actuelle. Ils restent enregistrés sur cet appareil.", "Tus favoritos no están disponibles en la biblioteca actual. Siguen guardados en este dispositivo.", "收藏的内容暂未在当前曲库中显示。此设备上的收藏记录仍会保留。", "收藏的內容暫未在目前曲庫中顯示。此裝置上的收藏記錄仍會保留。"],
+  "problemTitle": ["Local favorites", "端末のお気に入り", "로컬 즐겨찾기", "Favoris locaux", "Favoritos locales", "本地收藏", "本機收藏"],
+  "loadFailed": ["Could not read local favorites. Your saved file has not been changed. Try again.", "端末のお気に入りを読み込めませんでした。保存ファイルは変更していません。再試行してください。", "로컬 즐겨찾기를 읽지 못했습니다. 저장 파일은 변경되지 않았습니다. 다시 시도하세요.", "Impossible de lire les favoris locaux. Le fichier enregistré n’a pas été modifié. Réessayez.", "No se pudieron leer los favoritos locales. El archivo guardado no ha cambiado. Inténtalo de nuevo.", "无法读取本地收藏，已有文件未被修改。请重试。", "無法讀取本機收藏，已有檔案未被修改。請重試。"],
+  "saveFailed": ["Could not save this change on your device. Your previous favorites are unchanged. Try again.", "この端末に変更を保存できませんでした。以前のお気に入りは変更していません。再試行してください。", "이 기기에 변경 사항을 저장하지 못했습니다. 이전 즐겨찾기는 변경되지 않았습니다. 다시 시도하세요.", "Impossible d’enregistrer sur cet appareil. Vos favoris précédents sont conservés. Réessayez.", "No se pudo guardar el cambio en este dispositivo. Tus favoritos anteriores no han cambiado. Inténtalo de nuevo.", "无法在此设备保存本次更改，原有收藏保持不变。请重试。", "無法在此裝置儲存本次變更，原有收藏保持不變。請重試。"]
+}

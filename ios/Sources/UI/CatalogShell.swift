@@ -8,6 +8,7 @@ enum CatalogRoute: Hashable {
     case genre(String)
     case albumSearch(String)
     case trackSearch(String)
+    case curatedPicks
 }
 
 struct CatalogShell: View {
@@ -18,6 +19,11 @@ struct CatalogShell: View {
 
     var body: some View {
         PlayerPresentation(model: model) { library }
+            .alert(L10n.text("personal.problemTitle"), isPresented: Binding(
+                get: { model.personalFavorites.error != nil },
+                set: { if !$0 { model.personalFavorites.error = nil } })) {
+                Button(L10n.text("common.done"), role: .cancel) { model.personalFavorites.error = nil }
+            } message: { Text(model.personalFavorites.error ?? "") }
     }
 
     private var library: some View {
@@ -42,7 +48,7 @@ struct CatalogShell: View {
             Tab(L10n.text("nav.library"), systemImage: "square.grid.2x2", value: .albums) { stack(.albums) }
             Tab(L10n.text("nav.artists"), systemImage: "person.2", value: .artists) { stack(.artists) }
             Tab(L10n.text("nav.tracks"), systemImage: "music.note.list", value: .tracks) { stack(.tracks) }
-            Tab(L10n.text("nav.favs"), systemImage: "heart", value: .favorites) { stack(.favorites) }
+            Tab(L10n.text("personal.tab"), systemImage: "heart", value: .favorites) { stack(.favorites) }
             Tab(L10n.text("common.search"), systemImage: "magnifyingglass", value: .search, role: .search) { stack(.search) }
         }.tabViewStyle(.sidebarAdaptable)
     }
@@ -52,7 +58,7 @@ struct CatalogShell: View {
             stack(.albums).tabItem { Label(L10n.text("nav.library"), systemImage: "square.grid.2x2") }.tag(LibraryTab.albums)
             stack(.artists).tabItem { Label(L10n.text("nav.artists"), systemImage: "person.2") }.tag(LibraryTab.artists)
             stack(.tracks).tabItem { Label(L10n.text("nav.tracks"), systemImage: "music.note.list") }.tag(LibraryTab.tracks)
-            stack(.favorites).tabItem { Label(L10n.text("nav.favs"), systemImage: "heart") }.tag(LibraryTab.favorites)
+            stack(.favorites).tabItem { Label(L10n.text("personal.tab"), systemImage: "heart") }.tag(LibraryTab.favorites)
             stack(.search).tabItem { Label(L10n.text("common.search"), systemImage: "magnifyingglass") }.tag(LibraryTab.search)
         }
     }
@@ -64,7 +70,7 @@ struct CatalogShell: View {
                 case .albums: AlbumsScreen(model: model)
                 case .artists: ArtistsScreen(model: model)
                 case .tracks: TracksScreen(model: model)
-                case .favorites: FavoritesScreen(model: model)
+                case .favorites: PersonalFavoritesScreen(model: model)
                 case .search: SearchScreen(model: model)
                 }
             }
@@ -72,6 +78,7 @@ struct CatalogShell: View {
             .navigationDestination(for: CatalogRoute.self) { route in
                 Group {
                     switch route {
+                    case .curatedPicks: FavoritesScreen(model: model)
                     case .album(let id): AlbumView(model: model, albumID: id)
                     case .artist(let name): ArtistScreen(model: model, name: name)
                     case .genre(let genre): AlbumsScreen(model: model, initialGenre: genre)

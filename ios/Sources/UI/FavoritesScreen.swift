@@ -55,7 +55,7 @@ struct FavoritesScreen: View {
         .environment(\.editMode, .constant(editing && canEdit ? .active : .inactive))
         .refreshable { await model.catalog.refresh() }
         .overlay { if isEmpty { empty } }
-        .navigationTitle(L10n.text("nav.favs"))
+        .navigationTitle(L10n.text("personal.curatedTitle"))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -87,7 +87,7 @@ struct FavoritesScreen: View {
     }
 
     private var empty: some View {
-        ContentUnavailableView(L10n.text(kind == .album ? "favs.emptyAlbums" : "favs.emptyTracks"), systemImage: "heart",
+        ContentUnavailableView(L10n.text(kind == .album ? "favs.emptyAlbums" : "favs.emptyTracks"), systemImage: "sparkles",
             description: Text(L10n.text(model.sessionStore.isAdmin ? "favs.emptyHintAdmin" : "favs.emptyHintUser")))
     }
 

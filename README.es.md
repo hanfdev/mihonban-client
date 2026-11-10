@@ -1,6 +1,14 @@
-# mihonban / 見本盤
+# Mihonban Client
 
 [English](README.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Français](README.fr.md) · [Español](README.es.md)
+
+Este repositorio desarrolla un fork independiente del cliente para iPhone/iPad destinado a quienes escuchan música desde un servidor Mihonban, incluidos los oyentes habituales. Parte del Build 95 verificado del cliente original y conserva el historial del código de origen y la licencia AGPL-3.0.
+
+**Mis favoritos** son marcadores de álbumes y canciones guardados en el dispositivo, por separado para cada servidor. **Selección de administradores** sigue siendo la selección compartida del servidor, gestionada por sus administradores. Los favoritos personales se pueden modificar sin conexión, sin cambiar la selección compartida ni descargar audio. Actualmente el servidor identifica roles de acceso, no cuentas individuales, por lo que no se ofrece sincronización entre dispositivos ni separación por cuenta.
+
+La aplicación usa `org.mihonban.client.ios` y el nombre **Mihonban Client**, lo que permite instalarla junto a la aplicación original. Consulta el [alcance, almacenamiento y compilación del cliente](CLIENT-FORK.es.md) y los [artefactos de compilación](https://github.com/hanfdev/mihonban-client/actions/workflows/mobile.yml). Una ejecución correcta de CI proporciona un IPA sin firmar, que debe firmarse antes de instalarse.
+
+La documentación heredada que aparece a continuación describe el [proyecto del servidor Mihonban](https://github.com/hanfdev/mihonban) en su conjunto. El código del servidor, web, escritorio y Android se conserva como contexto del proyecto de origen; el desarrollo inicial de este fork se centra en el cliente iOS/iPadOS.
 
 Mihonban es una biblioteca musical privada y autoalojada con un reproductor web adaptable. Puedes ejecutarla localmente con Node y SQLite, usar el emulador D1 local de Wrangler o desplegar la misma aplicación en Cloudflare Workers y D1. Los archivos de audio permanecen en un almacenamiento bajo tu control.
 

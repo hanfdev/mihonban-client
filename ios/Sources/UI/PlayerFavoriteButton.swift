@@ -23,13 +23,13 @@ struct PlayerFavoriteButton: View {
                     if token == session.revision { notice = favorites.error }
                 }
             } label: {
-                Image(systemName: selected ? "heart.fill" : "heart")
+                Image(systemName: selected ? "sparkles" : "sparkle")
                     .font(.system(size: 22, weight: .medium))
                     .foregroundStyle(selected ? Theme.accent : Theme.dim)
                     .frame(width: 44, height: 44).contentShape(Rectangle())
             }.buttonStyle(.plain).disabled(submitting || favorites.busy)
                 .accessibilityIdentifier("player.favorite")
-                .accessibilityLabel(L10n.text(selected ? "common.unfav" : "common.fav"))
+                .accessibilityLabel(L10n.text(selected ? "personal.curatedRemove" : "personal.curatedAdd"))
                 .accessibilityAddTraits(selected ? .isSelected : [])
                 .alert(notice ?? "", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
                     Button(L10n.text("common.done"), role: .cancel) { notice = nil }

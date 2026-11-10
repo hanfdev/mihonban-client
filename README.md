@@ -1,6 +1,14 @@
-# mihonban / 見本盤
+# Mihonban Client
 
 [English](README.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Français](README.fr.md) · [Español](README.es.md)
+
+This repository develops an independent iPhone/iPad client fork for people who listen to a Mihonban server, including ordinary listeners. It starts from the original client's verified Build 95 and retains the upstream source history and AGPL-3.0 license.
+
+**My favorites** are device-local album and song bookmarks, stored separately for each server. **Admin picks** remain the server's shared, administrator-managed selection. Personal favorites work offline and do not change shared picks or download audio. The server currently identifies access roles rather than individual accounts, so personal favorites do not sync across devices or claim per-account isolation.
+
+The app uses `org.mihonban.client.ios` and the display name **Mihonban Client**, so it can be installed alongside the original app. See [client scope, storage, and building](CLIENT-FORK.md) and [client build artifacts](https://github.com/hanfdev/mihonban-client/actions/workflows/mobile.yml). A successful CI run provides an unsigned IPA that needs signing before installation.
+
+The inherited documentation below describes the wider [Mihonban server project](https://github.com/hanfdev/mihonban). Server, web, desktop and Android sources remain available as upstream context; the new fork's initial development scope is the iOS/iPadOS client.
 
 Mihonban is a private, self-hosted music library with a responsive web player. Run it locally with Node and SQLite, use Wrangler's local D1 emulator, or deploy the same application to Cloudflare Workers and D1. Audio remains in storage you control.
 

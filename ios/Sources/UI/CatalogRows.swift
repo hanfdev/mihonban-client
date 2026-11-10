@@ -32,10 +32,7 @@ struct CatalogTrackRow: View {
                         Text(track.artist ?? "").font(Theme.body(12)).foregroundStyle(.secondary).lineLimit(1)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading)
-                if model.favorites.contains(.track, id: track.id) {
-                    Image(systemName: "heart.fill").font(Theme.body(12)).foregroundStyle(Theme.accent)
-                        .accessibilityLabel(L10n.text("common.faved"))
-                }
+                FavoriteBadges(kind: .track, id: track.id, model: model)
                 if model.downloads?.records[track.id]?.state == .done {
                     Image(systemName: "arrow.down.circle.fill").font(Theme.body(12)).foregroundStyle(.secondary)
                         .accessibilityLabel(L10n.text("mobile.downloaded"))
@@ -77,10 +74,26 @@ struct TrackActions: View {
                 Button(L10n.text("mobile.download"), systemImage: "arrow.down.circle") { Task { await model.download(track) } }
             }
         }
-        if model.sessionStore.isAdmin {
-            let faved = model.favorites.contains(.track, id: track.id)
-            Button(L10n.text(faved ? "common.unfav" : "common.fav"), systemImage: faved ? "heart.slash" : "heart") {
-                Task { await model.favorites.toggle(.track, id: track.id) }
+        Section {
+            let saved = model.personalFavorites.contains(.track, id: track.id)
+            Button(L10n.text(saved ? "personal.remove" : "personal.add"), systemImage: saved ? "heart.slash" : "heart") {
+                let token = model.personalFavorites.revision
+                Task {
+                    guard token == model.personalFavorites.revision else { return }
+                    await model.personalFavorites.toggle(track: track)
+                }
+            }.disabled(!model.personalFavorites.isReady || model.personalFavorites.loading || model.personalFavorites.busy)
+                .accessibilityIdentifier("personal.track.\(track.id)")
+            if model.sessionStore.isAdmin {
+                let picked = model.favorites.contains(.track, id: track.id)
+                Button(L10n.text(picked ? "personal.curatedRemove" : "personal.curatedAdd"), systemImage: "sparkles") {
+                    let session = model.sessionStore.revision
+                    Task {
+                        guard model.signedIn, session == model.sessionStore.revision else { return }
+                        await model.favorites.toggle(.track, id: track.id)
+                    }
+                }.disabled(model.favorites.busy)
+                    .accessibilityIdentifier("curated.track.\(track.id)")
             }
         }
         Section {

@@ -52,9 +52,9 @@ struct AlbumView: View {
         }
         .background(Theme.background).navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            // Picks move to the bar so the play row stays symmetric.
+            // Personal favorites stay separate from admin picks in the menu.
             ToolbarItem(placement: .topBarTrailing) {
-                if let album, model.sessionStore.isAdmin { favoriteButton(album) }
+                if let album { favoriteButton(album) }
             }
             ToolbarItem(placement: .topBarTrailing) {
                 if let album {
@@ -207,11 +207,21 @@ struct AlbumView: View {
 
     @ViewBuilder
     private func favoriteButton(_ album: Album) -> some View {
-        let faved = model.favorites.contains(.album, id: album.id)
-        Button { Task { await model.favorites.toggle(.album, id: album.id) } } label: {
+        let faved = model.personalFavorites.contains(.album, id: album.id)
+        Button {
+            let token = model.personalFavorites.revision
+            Task {
+                guard token == model.personalFavorites.revision else { return }
+                await model.personalFavorites.toggle(album: album)
+            }
+        } label: {
             Image(systemName: faved ? "heart.fill" : "heart").foregroundStyle(faved ? Theme.accent : Theme.ink)
-        }.accessibilityLabel(L10n.text(faved ? "common.unfav" : "common.fav"))
-            .accessibilityIdentifier("album.favorite")
+                .frame(minWidth: 44, minHeight: 44)
+        }.accessibilityLabel(L10n.text(faved ? "personal.remove" : "personal.add"))
+            .accessibilityValue(L10n.text(faved ? "personal.saved" : "personal.notSaved"))
+            .accessibilityAddTraits(faved ? .isSelected : [])
+            .disabled(!model.personalFavorites.isReady || model.personalFavorites.loading || model.personalFavorites.busy)
+            .accessibilityIdentifier("album.personalFavorite")
     }
 
     private func trackList(_ album: Album) -> some View {

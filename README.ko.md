@@ -1,6 +1,14 @@
-# mihonban / 見本盤
+# Mihonban Client
 
 [English](README.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-Hant.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Français](README.fr.md) · [Español](README.es.md)
+
+이 저장소는 일반 청취자를 포함해 Mihonban 서버에서 음악을 듣는 사용자를 위한 독립 iPhone/iPad 클라이언트 포크를 개발합니다. 원본 클라이언트에서 검증한 Build 95를 기반으로 하며, 업스트림 소스 이력과 AGPL-3.0 라이선스를 유지합니다.
+
+**내 즐겨찾기**는 기기에 저장하는 앨범과 곡의 북마크이며 서버별로 구분됩니다. **관리자 추천**은 관리자가 관리하는 서버의 공유 선곡으로 유지됩니다. 개인 즐겨찾기는 오프라인에서도 변경할 수 있고, 공유 추천을 바꾸거나 오디오를 다운로드하지 않습니다. 현재 서버는 개인 계정이 아닌 접근 역할만 식별하므로 기기 간 동기화나 계정별 분리를 제공하지 않습니다.
+
+앱 식별자는 `org.mihonban.client.ios`, 표시 이름은 **Mihonban Client**이며 원본 앱과 함께 설치할 수 있습니다. [클라이언트 범위, 저장 및 빌드 안내](CLIENT-FORK.ko.md)와 [클라이언트 빌드 결과물](https://github.com/hanfdev/mihonban-client/actions/workflows/mobile.yml)을 참고하세요. 성공한 CI 실행은 서명되지 않은 IPA를 제공하며, 설치 전에 서명이 필요합니다.
+
+아래에 유지된 기존 문서는 더 넓은 [Mihonban 서버 프로젝트](https://github.com/hanfdev/mihonban)를 설명합니다. 서버, 웹, 데스크톱 및 Android 소스는 업스트림 참고 자료로 남겨 두며, 이 포크의 초기 개발 범위는 iOS/iPadOS 클라이언트입니다.
 
 Mihonban은 반응형 웹 플레이어를 제공하는 개인용 셀프 호스팅 음악 라이브러리입니다. Node와 SQLite로 로컬에서 실행하거나, Wrangler의 로컬 D1 에뮬레이터를 사용하거나, 같은 애플리케이션을 Cloudflare Workers와 D1에 배포할 수 있습니다. 오디오 파일은 사용자가 직접 관리하는 저장소에 그대로 보관됩니다.
 

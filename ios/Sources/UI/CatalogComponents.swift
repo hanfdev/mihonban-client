@@ -14,11 +14,7 @@ struct AlbumTile: View {
                 Cover(albumID: album.id, revision: album.updatedAt, client: model.imageClient)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(alignment: .topTrailing) {
-                        if model.favorites.contains(.album, id: album.id) {
-                            Image(systemName: "heart.fill").font(Theme.body(12)).foregroundStyle(Theme.accent)
-                                .padding(7).background(.regularMaterial, in: Circle()).padding(6)
-                                .accessibilityLabel(L10n.text("common.faved"))
-                        }
+                        FavoriteBadges(kind: .album, id: album.id, model: model, onCover: true)
                     }
                 AlbumCaption(album: album)
             }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
@@ -93,10 +89,26 @@ struct AlbumActions: View {
                 Button(L10n.text("mobile.download"), systemImage: "arrow.down.circle") { Task { await model.downloadAlbum(album.id) } }
             }
         }
-        if model.sessionStore.isAdmin {
-            let faved = model.favorites.contains(.album, id: album.id)
-            Button(L10n.text(faved ? "common.unfav" : "common.fav"), systemImage: faved ? "heart.slash" : "heart") {
-                Task { await model.favorites.toggle(.album, id: album.id) }
+        Section {
+            let saved = model.personalFavorites.contains(.album, id: album.id)
+            Button(L10n.text(saved ? "personal.remove" : "personal.add"), systemImage: saved ? "heart.slash" : "heart") {
+                let token = model.personalFavorites.revision
+                Task {
+                    guard token == model.personalFavorites.revision else { return }
+                    await model.personalFavorites.toggle(album: album)
+                }
+            }.disabled(!model.personalFavorites.isReady || model.personalFavorites.loading || model.personalFavorites.busy)
+                .accessibilityIdentifier("personal.album.\(album.id)")
+            if model.sessionStore.isAdmin {
+                let picked = model.favorites.contains(.album, id: album.id)
+                Button(L10n.text(picked ? "personal.curatedRemove" : "personal.curatedAdd"), systemImage: "sparkles") {
+                    let session = model.sessionStore.revision
+                    Task {
+                        guard model.signedIn, session == model.sessionStore.revision else { return }
+                        await model.favorites.toggle(.album, id: album.id)
+                    }
+                }.disabled(model.favorites.busy)
+                    .accessibilityIdentifier("curated.album.\(album.id)")
             }
         }
         Section {
