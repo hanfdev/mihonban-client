@@ -8,12 +8,14 @@ struct PersonalFavoritesProjection: Sendable {
 
     static func build(albums savedAlbums: [Album], tracks savedTracks: [Track],
                       index: CatalogIndex, tracksLoaded: Bool, includeHidden: Bool) -> Self {
-        let albums = Dictionary(index.albums.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let albums = Dictionary(index.albums.filter { includeHidden || $0.hidden != true }.map { ($0.id, $0) },
+                                uniquingKeysWith: { first, _ in first })
         let tracks = Dictionary(index.tracks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         return Self(albums: savedAlbums.compactMap { albums[$0.id] }, tracks: savedTracks.compactMap { saved in
             if let current = tracks[saved.id] {
                 // A parent album can be hidden even when its normalized track is not.
-                guard let parent = current.albumId, albums[parent] != nil else { return nil }
+                guard includeHidden || current.hidden != true,
+                      let parent = current.albumId, albums[parent] != nil else { return nil }
                 return current
             }
             guard !tracksLoaded, let parent = saved.albumId, albums[parent] != nil,
@@ -27,6 +29,7 @@ private struct PersonalFavoritesRequest: Equatable {
     let favorites: UUID
     let catalog: UUID
     let tracksLoaded: Bool
+    let includeHidden: Bool
 }
 
 struct PersonalFavoritesScreen: View {
@@ -40,7 +43,8 @@ struct PersonalFavoritesScreen: View {
     private var store: PersonalFavoritesStore { model.personalFavorites }
     private var request: PersonalFavoritesRequest {
         PersonalFavoritesRequest(favorites: store.revision, catalog: model.catalog.revision,
-                                 tracksLoaded: model.catalog.tracksLoaded)
+                                 tracksLoaded: model.catalog.tracksLoaded,
+                                 includeHidden: model.catalog.showHidden && model.sessionStore.canSeeHidden)
     }
     private var current: PersonalFavoritesProjection {
         completed == request ? projection : PersonalFavoritesProjection()

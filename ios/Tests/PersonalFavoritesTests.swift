@@ -461,6 +461,10 @@ final class PersonalFavoritesTests: XCTestCase {
             XCTAssertTrue(hidden.albums.isEmpty && hidden.tracks.isEmpty)
         }
         let allowedIndex = CatalogIndex(albums: [album], tracks: [track], artists: [], includeHidden: true)
+        let downgraded = PersonalFavoritesProjection.build(albums: store.albums, tracks: store.tracks,
+            index: allowedIndex, tracksLoaded: true, includeHidden: false)
+        XCTAssertTrue(downgraded.albums.isEmpty && downgraded.tracks.isEmpty,
+                      "A role downgrade must hide old privileged index entries before the next catalog refresh")
         let allowed = PersonalFavoritesProjection.build(albums: store.albums, tracks: store.tracks,
             index: allowedIndex, tracksLoaded: true, includeHidden: true)
         XCTAssertEqual(allowed.albums.map(\.id), [album.id])
@@ -482,6 +486,19 @@ final class PersonalFavoritesTests: XCTestCase {
             index: index, tracksLoaded: true, includeHidden: false)
         XCTAssertEqual(projection.albums, [album])
         XCTAssertEqual(projection.tracks, [current], "A completed catalog is authoritative even if an old local snapshot exists")
+        var nowHidden = current
+        nowHidden.hidden = true
+        let privilegedIndex = CatalogIndex(albums: [album], tracks: [nowHidden], artists: [], includeHidden: true)
+        for loaded in [false, true] {
+            let downgraded = PersonalFavoritesProjection.build(albums: [staleAlbum], tracks: [stale],
+                index: privilegedIndex, tracksLoaded: loaded, includeHidden: false)
+            XCTAssertEqual(downgraded.albums, [album], "A visible parent remains available after a role downgrade")
+            XCTAssertTrue(downgraded.tracks.isEmpty,
+                          "A hidden current track cannot fall back to its older visible snapshot while the privileged index remains")
+        }
+        let authorized = PersonalFavoritesProjection.build(albums: [], tracks: [stale],
+            index: privilegedIndex, tracksLoaded: false, includeHidden: true)
+        XCTAssertEqual(authorized.tracks, [nowHidden], "Authorized hidden browsing must still use current metadata")
     }
 
     func testPersonalProjectionUsesOfflineSnapshotsOnlyForAuthorizedParentsBeforeTracksLoad() {
