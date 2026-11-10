@@ -522,8 +522,14 @@ final class MihonbanUITests: XCTestCase {
         XCTAssertTrue(element(app, "favorite.network-mp3").waitForExistence(timeout: 15))
         screenshot("09-picks")
 
+        // Admin picks is a pushed page; settings belongs to the collection root.
+        app.navigationBars["Admin picks"].buttons["BackButton"].tap()
+        XCTAssertTrue(app.buttons["personal.curated.open"].waitForExistence(timeout: 10))
+        let settings = app.buttons["settings.open"].firstMatch
+        XCTAssertTrue(settings.wait(for: \.isHittable, toEqual: true, timeout: 10))
+
         // The finished download is listed in Settings.
-        app.buttons["settings.open"].firstMatch.tap()
+        settings.tap()
         let downloads = app.buttons["downloads.open"]
         // Lazy list rows can exist while their tap centre is below the safe area.
         for _ in 0..<3 {
@@ -1693,7 +1699,7 @@ final class MihonbanUITests: XCTestCase {
                 assertTabletPlayerBalance(app)
                 if orientation == .portrait {
                     let cover = element(app, "player.cover").frame
-                    let heading = app.buttons["player.title"].frame
+                    let heading = tabletPlayerHeadingFrame(app)
                     XCTAssertGreaterThanOrEqual(cover.width, window.width * 0.60)
                     XCTAssertGreaterThanOrEqual(heading.width, window.width * 0.73)
                     XCTAssertGreaterThan(heading.width, cover.width + 60)
@@ -1702,12 +1708,12 @@ final class MihonbanUITests: XCTestCase {
                 }
                 if orientation == .landscapeLeft {
                     let cover = element(app, "player.cover").frame
-                    let heading = app.buttons["player.title"].frame
+                    let heading = tabletPlayerHeadingFrame(app)
                     let footer = app.buttons["player.queue"].frame
                     XCTAssertEqual(cover.midY, (heading.minY + footer.maxY) / 2, accuracy: 12,
                                    "landscape controls must be centered beside the cover")
                     XCTAssertEqual(heading.width / cover.width, 1.35, accuracy: 0.03,
-                                   "tablet titles need a wider column than the artwork")
+                                   "the title and personal favorite share a wider column than the artwork")
                     XCTAssertGreaterThan(heading.minX - cover.maxX, window.width * 0.04)
                     XCTAssertGreaterThan(cover.minX - window.minX, window.width * 0.08)
                     let play = app.buttons["player.toggle"].firstMatch.frame
@@ -1747,7 +1753,8 @@ final class MihonbanUITests: XCTestCase {
         assertTabletPlayerBalance(app)
         let title = app.buttons["player.title"]
         let cover = element(app, "player.cover").frame
-        XCTAssertEqual(title.frame.width / cover.width, 1.35, accuracy: 0.03)
+        let heading = tabletPlayerHeadingFrame(app)
+        XCTAssertEqual(heading.width / cover.width, 1.35, accuracy: 0.03)
         XCTAssertTrue(app.sliders["player.seek"].isHittable)
         XCTAssertTrue(app.buttons["player.queue"].isHittable)
         XCTAssertEqual(app.buttons["player.toggle"].firstMatch.label, "Play")
@@ -1760,6 +1767,11 @@ final class MihonbanUITests: XCTestCase {
         waitForLabel(app.buttons["player.toggle"].firstMatch, "Play")
         let after = element(app, "player.cover").frame
         XCTAssertEqual(before, after)
+        let shortHeading = tabletPlayerHeadingFrame(app)
+        XCTAssertEqual(shortHeading.minX, heading.minX, accuracy: 1)
+        XCTAssertEqual(shortHeading.minY, heading.minY, accuracy: 1)
+        XCTAssertEqual(shortHeading.width, heading.width, accuracy: 1)
+        XCTAssertEqual(shortHeading.height, heading.height, accuracy: 1)
         assertTabletPlayerBalance(app)
         screenshot("47-player-dark-short-title")
     }
@@ -1817,11 +1829,27 @@ final class MihonbanUITests: XCTestCase {
         XCTAssertTrue(app.buttons["player.expand"].exists)
     }
 
+    private func tabletPlayerHeadingFrame(_ app: XCUIApplication,
+                                          file: StaticString = #filePath, line: UInt = #line) -> CGRect {
+        let title = app.buttons["player.title"].frame
+        let favorite = app.buttons["player.personalFavorite"]
+        XCTAssertTrue(favorite.exists, file: file, line: line)
+        let heart = favorite.frame
+        XCTAssertEqual(heart.width, 44, accuracy: 1, file: file, line: line)
+        XCTAssertEqual(heart.height, 44, accuracy: 1, file: file, line: line)
+        XCTAssertEqual(heart.minX - title.maxX, 12, accuracy: 1,
+                       "The personal action must reserve its own space beside the title", file: file, line: line)
+        XCTAssertEqual(heart.midY, title.midY, accuracy: 1, file: file, line: line)
+        // The marquee uses the remaining title width; the complete heading row
+        // still defines the control column shared by the timeline and transport.
+        return title.union(heart)
+    }
+
     private func assertTabletPlayerBalance(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         let scroll = app.scrollViews["player.scroll"].frame
         let collapse = app.buttons["player.collapse"].frame
         let cover = element(app, "player.cover").frame
-        let heading = app.buttons["player.title"].frame
+        let heading = tabletPlayerHeadingFrame(app, file: file, line: line)
         let footer = app.buttons["player.queue"].frame
         let composition = cover.union(heading).union(footer)
         let visibleTop = max(scroll.minY, collapse.maxY + 16)
