@@ -71,17 +71,26 @@ private final class ArtworkRenewalProtocol: URLProtocol {
         }
 
         func stop(_ connection: ArtworkRenewalProtocol) {
-            lock.withLock { _ = stopped.insert(ObjectIdentifier(connection)) }
+            lock.withLock {
+                // Only retained cover requests participate in this gate. API
+                // request addresses can be reused after their objects deallocate.
+                guard let host = connection.request.url?.host,
+                      covers[host]?.contains(where: { $0 === connection }) == true else { return }
+                _ = stopped.insert(ObjectIdentifier(connection))
+            }
         }
 
-        func finish(_ host: String, cover: Int, status: Int, data: Data) {
+        @discardableResult
+        func finish(_ host: String, cover: Int, status: Int, data: Data) -> Bool {
             let connection = lock.withLock { () -> ArtworkRenewalProtocol? in
                 guard let values = covers[host], values.indices.contains(cover) else { return nil }
                 let connection = values[cover]
                 guard stopped.insert(ObjectIdentifier(connection)).inserted else { return nil }
                 return connection
             }
-            connection?.respond(status, data: data, mime: "image/png")
+            guard let connection else { return false }
+            connection.respond(status, data: data, mime: "image/png")
+            return true
         }
 
         func remove(_ host: String) {
@@ -189,7 +198,8 @@ private final class ArtworkRenewalFixture {
         XCTAssertEqual(model.session?.role, role)
     }
 
-    func finish(_ cover: Int, status: Int = 200, data: Data? = nil) {
+    @discardableResult
+    func finish(_ cover: Int, status: Int = 200, data: Data? = nil) -> Bool {
         ArtworkRenewalProtocol.state.finish(host, cover: cover, status: status, data: data ?? green)
     }
 
@@ -252,7 +262,7 @@ extension OfflineLaunchTests {
             XCTAssertEqual(preparations, 1, "A role boundary keeps the existing disk configuration")
             let current = fixture.image()
             try await waitForArtworkRenewal { fixture.count("cover.png") == 2 }
-            fixture.finish(1)
+            XCTAssertTrue(fixture.finish(1), "The renewed role's cover must receive the fixture's response")
             try await waitForArtworkRenewal { fixture.finishedImages == 2 }
             let visible = await current.value
             XCTAssertNotNil(visible, "An obsolete success or 401 must not populate the new cache")
@@ -285,7 +295,7 @@ extension OfflineLaunchTests {
         let second = fixture.image()
         try await waitForArtworkRenewal { await fixture.artwork.coalescedRequestsForTesting == 1 }
         XCTAssertEqual(fixture.count("cover.png"), 1)
-        fixture.finish(0, data: fixture.red)
+        XCTAssertTrue(fixture.finish(0, data: fixture.red), "The shared current cover must receive the fixture's response")
         try await waitForArtworkRenewal { fixture.finishedImages == 2 }
         let a = await first.value
         let b = await second.value
@@ -337,7 +347,7 @@ extension OfflineLaunchTests {
         try await fixture.connect()
         let replacement = fixture.image()
         try await waitForArtworkRenewal { fixture.count("cover.png") == 2 }
-        fixture.finish(1)
+        XCTAssertTrue(fixture.finish(1), "The replacement session's cover must receive the fixture's response")
         try await waitForArtworkRenewal { fixture.finishedImages == 2 }
         let current = await replacement.value
         XCTAssertNotNil(current)
@@ -369,7 +379,7 @@ extension OfflineLaunchTests {
         try await waitForArtworkRenewal { fixture.count("cover.png") == 2 }
         await fixture.directory.release()
         await cacheChange.value
-        fixture.finish(1)
+        XCTAssertTrue(fixture.finish(1), "The replacement cover must receive the fixture's response")
         try await waitForArtworkRenewal { fixture.finishedImages == 2 }
         let visible = await current.value
         XCTAssertNotNil(visible, "A cache-only preparation must preserve the replacement role's image caller")
@@ -398,7 +408,8 @@ extension OfflineLaunchTests {
             let replacement = fixture.image()
             try await waitForArtworkRenewal { await fixture.artwork.coalescedRequestsForTesting == 1 }
             XCTAssertEqual(fixture.count("cover.png"), 1, "Without the boundary, the new role joins the old request")
-            fixture.finish(0, status: oldStatus, data: fixture.red)
+            XCTAssertTrue(fixture.finish(0, status: oldStatus, data: fixture.red),
+                          "The baseline request must receive the controlled success or failure response")
             try await waitForArtworkRenewal { fixture.finishedImages == 2 }
             let a = await old.value
             let b = await replacement.value

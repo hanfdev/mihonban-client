@@ -194,6 +194,22 @@ final class MihonbanUITests: XCTestCase {
     }
 
     private func verifyPickFollowsCurrentTrack(_ app: XCUIApplication) {
+        waitForLabel(app.buttons["player.toggle"].firstMatch, "Play")
+        waitForLabel(app.buttons["player.title"], "Test MP3")
+        // The fixture lasts eight seconds; the iPad run took fifteen seconds
+        // to deliver Pause after selecting FLAC. Repeat one keeps this metadata
+        // check on its chosen track while manual Next still advances normally.
+        let repeatOff = app.buttons["Repeat off"].firstMatch
+        XCTAssertTrue(repeatOff.waitForExistence(timeout: 10))
+        XCTAssertEqual(repeatOff.label, "Repeat off")
+        repeatOff.tap()
+        let repeatAll = app.buttons["Repeat all"].firstMatch
+        XCTAssertTrue(repeatAll.waitForExistence(timeout: 10))
+        XCTAssertEqual(repeatAll.label, "Repeat all")
+        repeatAll.tap()
+        let repeatOne = app.buttons["Repeat one"].firstMatch
+        XCTAssertTrue(repeatOne.waitForExistence(timeout: 10))
+        XCTAssertEqual(repeatOne.label, "Repeat one")
         app.buttons["player.collapse"].tap()
         openTab(app, "Tracks")
         let flac = app.buttons["track.network-flac"]
@@ -203,12 +219,22 @@ final class MihonbanUITests: XCTestCase {
         XCTAssertTrue(pause.waitForExistence(timeout: 10))
         pause.tap()
         app.buttons["player.expand"].tap()
+        waitForLabel(app.buttons["player.toggle"].firstMatch, "Play")
         waitForLabel(app.buttons["player.title"], "Test FLAC")
+        XCTAssertEqual(repeatOne.label, "Repeat one")
         assertPlayerPickLabel(app, trackID: "network-flac", selected: true)
         app.buttons["player.next"].tap()
         waitForLabel(app.buttons["player.title"], "Test MP3")
+        waitForLabel(app.buttons["player.toggle"].firstMatch, "Pause")
         app.buttons["player.toggle"].firstMatch.tap()
+        waitForLabel(app.buttons["player.toggle"].firstMatch, "Play")
+        waitForLabel(app.buttons["player.title"], "Test MP3")
         assertPlayerPickLabel(app, trackID: "network-mp3", selected: false)
+        XCTAssertTrue(repeatOne.waitForExistence(timeout: 10))
+        XCTAssertEqual(repeatOne.label, "Repeat one")
+        repeatOne.tap()
+        XCTAssertTrue(repeatOff.waitForExistence(timeout: 10))
+        XCTAssertEqual(repeatOff.label, "Repeat off")
     }
 
     private func openAdminPlayer(appearance: String? = nil) -> XCUIApplication {
