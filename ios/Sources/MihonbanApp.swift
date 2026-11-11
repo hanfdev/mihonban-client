@@ -27,7 +27,8 @@ struct RootView: View {
     // An authorized snapshot is ready to browse while its refresh continues.
     // Authentication and an empty first load still use the startup surface.
     var showsStartupBrand: Bool {
-        model.isBootstrapping && !(model.signedIn && !model.catalog.index.albums.isEmpty)
+        model.restoringArtworkAuthorization ||
+            (model.isBootstrapping && !(model.signedIn && !model.catalog.index.albums.isEmpty))
     }
 
     var body: some View {

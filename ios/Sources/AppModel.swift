@@ -48,6 +48,9 @@ final class AppModel {
     @ObservationIgnored private let artworkStore: ArtworkStore
     @ObservationIgnored private let prepareArtworkDirectory: @Sendable (URL) async -> Void
     @ObservationIgnored private var artworkConfiguration = UUID()
+    private var readyArtworkAuthorization: UUID?
+    @ObservationIgnored private var artworkAuthorizationResetID = UUID()
+    @ObservationIgnored private var artworkAuthorizationReset: Task<Void, Never>?
 
     init(defaults: UserDefaults = .standard, transport: URLSession? = nil,
          artworkStore: ArtworkStore = .shared,
@@ -91,13 +94,35 @@ final class AppModel {
         favorites.reset()
         player.stop()
         pendingRoute = nil
+        let token = generation
         let session = sessionStore.revision
         let authorization = sessionStore.authorizationRevision
+        let boundary = retireArtworkAuthorization(keepingCache: true)
         Task {
-            guard self.signedIn, self.sessionStore.revision == session,
+            await boundary.task.value
+            guard self.generation == token, self.artworkAuthorizationResetID == boundary.id,
+                  self.signedIn, self.sessionStore.revision == session,
                   self.sessionStore.authorizationRevision == authorization else { return }
+            self.readyArtworkAuthorization = authorization
             await self.catalog.connect()
         }
+    }
+
+    private func retireArtworkAuthorization(keepingCache: Bool = false) -> (id: UUID, task: Task<Void, Never>) {
+        readyArtworkAuthorization = nil
+        let id = UUID()
+        artworkAuthorizationResetID = id
+        let previous = artworkAuthorizationReset
+        let artwork = artworkStore
+        // Mandatory boundaries run in order even when their original session
+        // is gone. A replacement shell waits for every preceding retirement.
+        let task = Task {
+            await previous?.value
+            if keepingCache { await artwork.retireAuthorization() }
+            else { await artwork.configure(disk: nil) }
+        }
+        artworkAuthorizationReset = task
+        return (id, task)
     }
 
     var client: APIClient? { sessionStore.client }
@@ -105,6 +130,9 @@ final class AppModel {
     // Image requests are skipped in demo mode, whose service address is fake.
     var imageClient: APIClient? { demo ? nil : sessionStore.client }
     var signedIn: Bool { sessionStore.info?.ok == true && !sessionStore.needsSignIn }
+    var restoringArtworkAuthorization: Bool {
+        signedIn && readyArtworkAuthorization != sessionStore.authorizationRevision
+    }
 
     // Returns false when some files could not be removed.
     func clearCache() async -> Bool {
@@ -187,6 +215,7 @@ final class AppModel {
         if ProcessInfo.processInfo.arguments.contains("--demo"), let api = try? APIClient(address: "https://example.invalid") {
             demo = true
             sessionStore.connect(api, info: SessionInfo(ok: true, role: "user", guest: true))
+            readyArtworkAuthorization = sessionStore.authorizationRevision
             let albums = DemoLibrary.albums
             let tracks = ProcessInfo.processInfo.arguments.contains("--demo-large-tracks")
                 ? (0..<10_000).reversed().map {
@@ -251,8 +280,9 @@ final class AppModel {
     private func open(_ api: APIClient, info: SessionInfo, token: UUID) async {
         // Retire the previous authorization before publishing a new shell.
         // Cache-only configuration must not cancel this mandatory boundary.
-        await artworkStore.configure(disk: nil)
-        guard token == generation else { return }
+        let boundary = retireArtworkAuthorization()
+        await boundary.task.value
+        guard token == generation, artworkAuthorizationResetID == boundary.id else { return }
         // Invalidate the previous catalog before publishing a new authorization.
         // Storage setup can suspend, allowing the new shell to appear meanwhile.
         catalog.reset()
@@ -260,6 +290,7 @@ final class AppModel {
         personalFavorites.reset()
         // Metadata is shown only after authorization, never while signed out.
         sessionStore.connect(api, info: info)
+        readyArtworkAuthorization = sessionStore.authorizationRevision
         player.connect(api)
         await personalFavorites.connect(baseURL: api.baseURL)
         guard token == generation else { return }
@@ -328,7 +359,7 @@ final class AppModel {
     func disconnect() {
         generation = UUID()
         artworkConfiguration = UUID()
-        let token = generation
+        _ = retireArtworkAuthorization()
         player.stop()
         // Downloaded files stay on disk for the next sign-in to this service;
         // they are reachable only through an authorized session's manifest.
@@ -337,10 +368,6 @@ final class AppModel {
         media = nil
         player.media = nil
         player.downloads = nil
-        Task {
-            guard generation == token, media == nil else { return }
-            await artworkStore.configure(disk: nil)
-        }
         if let client {
             client.clearCookies()
             _ = CredentialStore.save(nil, for: client.baseURL.absoluteString)

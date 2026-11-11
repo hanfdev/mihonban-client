@@ -23,6 +23,12 @@ actor ArtworkStore {
 
     init() { images.totalCostLimit = 24 * 1024 * 1024; images.countLimit = 120 }
 
+    func retireAuthorization() {
+        // Permissions can change without changing the server or cache switch.
+        // Retire responses and writers while retaining the current disk path.
+        configure(disk: disk)
+    }
+
     func configure(disk: URL?, preservingRequests: Bool = false) {
         generation = UUID()
         if !preservingRequests {
