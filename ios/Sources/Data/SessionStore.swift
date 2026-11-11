@@ -6,9 +6,11 @@ final class SessionStore {
     private(set) var client: APIClient?
     private(set) var info: SessionInfo?
     private(set) var revision = UUID()
+    private(set) var authorizationRevision = UUID()
     private(set) var needsSignIn = false
     @ObservationIgnored private var renewal: Task<SessionInfo, Error>?
     @ObservationIgnored var authorizationRejected: ((URL) -> Void)?
+    @ObservationIgnored var authorizationChanged: (() -> Void)?
     var isAdmin: Bool { info?.role == "admin" }
     var canSeeHidden: Bool { isAdmin || info?.role == "companion" }
 
@@ -21,6 +23,7 @@ final class SessionStore {
 
     func invalidate() {
         revision = UUID()
+        authorizationRevision = UUID()
         renewal?.cancel()
         renewal = nil
         client = nil
@@ -51,8 +54,16 @@ final class SessionStore {
                 if isRejected(error) { rejectAuthorization(client, token: token) }
                 throw error
             }
+            let changed = info?.role != renewed.role || info?.guest != renewed.guest
             info = renewed
+            if changed {
+                // Retire permission-scoped UI and caches before retrying. Keep
+                // the request revision so shared renewal waiters can continue.
+                authorizationRevision = UUID()
+                authorizationChanged?()
+            }
             do {
+                try Task.checkCancellation()
                 let value = try await operation(client)
                 try Task.checkCancellation()
                 guard token == revision else { throw CancellationError() }

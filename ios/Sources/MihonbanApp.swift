@@ -33,7 +33,9 @@ struct RootView: View {
     var body: some View {
         Group {
             if showsStartupBrand { StartupBrandView() }
-            else if model.signedIn { CatalogShell(model: model) }
+            else if model.signedIn {
+                CatalogShell(model: model).id(model.sessionStore.authorizationRevision)
+            }
             else { ConnectionView(model: model) }
         }
         .background(Theme.background)

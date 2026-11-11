@@ -78,6 +78,26 @@ final class AppModel {
             guard RememberedSession.load(self.defaults)?.address == address.absoluteString else { return }
             RememberedSession.save(nil, self.defaults)
         }
+        session.authorizationChanged = { [weak self] in self?.renewedAuthorization() }
+    }
+
+    private func renewedAuthorization() {
+        guard let api = client, let info = sessionStore.info, info.ok else { return }
+        // A successful renewal can change permissions even when its retried
+        // operation fails. Retire the previous role before any further await.
+        RememberedSession.save(RememberedSession(address: api.baseURL.absoluteString,
+                                                role: info.role, guest: info.guest), defaults)
+        catalog.reset()
+        favorites.reset()
+        player.stop()
+        pendingRoute = nil
+        let session = sessionStore.revision
+        let authorization = sessionStore.authorizationRevision
+        Task {
+            guard self.signedIn, self.sessionStore.revision == session,
+                  self.sessionStore.authorizationRevision == authorization else { return }
+            await self.catalog.connect()
+        }
     }
 
     var client: APIClient? { sessionStore.client }

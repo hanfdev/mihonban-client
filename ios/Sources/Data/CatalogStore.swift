@@ -62,6 +62,7 @@ final class CatalogStore {
         if let saved = await disk?.load(scope, as: CatalogSnapshot.self), token == generation {
             apply(saved)
         }
+        guard token == generation else { return }
         await refresh()
     }
 
@@ -160,10 +161,16 @@ final class CatalogStore {
     }
 
     func album(_ id: String, refresh: Bool = false) async throws -> Album {
-        if (!refresh || offline), let album = details[id] { return album }
+        if (!refresh || offline), let album = cachedAlbum(id) { return album }
         if offline { throw ServerError(status: 404, code: nil) }
-        if let request = requests[id] { return try await request.value }
         let token = generation
+        if let request = requests[id] {
+            let album = try await request.value
+            try Task.checkCancellation()
+            guard token == generation else { throw CancellationError() }
+            guard album.hidden != true || session.canSeeHidden else { throw ServerError(status: 404, code: nil) }
+            return album
+        }
         let session = session
         let request = Task { try await session.perform { try await $0.album(id) } }
         requests[id] = request
@@ -190,14 +197,17 @@ final class CatalogStore {
                 #endif
                 try Task.checkCancellation()
                 guard token == generation else { throw CancellationError() }
-                if let saved { return saved }
+                if let saved, saved.hidden != true || session.canSeeHidden { return saved }
                 if let local = localAlbum?(id), local.hidden != true || session.canSeeHidden { return local }
             }
             throw error
         }
     }
 
-    func cachedAlbum(_ id: String) -> Album? { details[id] }
+    func cachedAlbum(_ id: String) -> Album? {
+        guard let album = details[id], album.hidden != true || session.canSeeHidden else { return nil }
+        return album
+    }
 
     // Administrator writes. The service is the source of truth: local copies
     // change only after it accepts the write, so a refusal leaves them intact.
@@ -239,13 +249,19 @@ final class CatalogStore {
 
     func artistTracks(_ name: String) async throws -> [Track] {
         if offline { return [] }
+        let token = generation
         let hidden = showHidden && session.canSeeHidden
-        return try await session.perform { try await $0.featuredTracks(artist: name, includeHidden: hidden) }
+        let tracks = try await session.perform { try await $0.featuredTracks(artist: name, includeHidden: hidden) }
+        guard token == generation else { throw CancellationError() }
+        return tracks
     }
 
     func biography(_ name: String) async throws -> String {
         if offline { return "" }
-        return try await session.perform { try await $0.biography(artist: name) }
+        let token = generation
+        let text = try await session.perform { try await $0.biography(artist: name) }
+        guard token == generation else { throw CancellationError() }
+        return text
     }
 
     // A saved library stays usable when the service cannot be reached.
